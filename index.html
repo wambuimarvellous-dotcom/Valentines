@@ -10,7 +10,6 @@
 <!-- Social sharing -->
 <meta property="og:title" content="Diana 💜 Will You Be My Valentine?" />
 <meta property="og:description" content="A special surprise made just for you 💕" />
-<meta property="og:image" content="photo1.jpg" />
 <meta property="og:type" content="website" />
 
 <style>
@@ -128,27 +127,6 @@ button{
   font-weight:600;
 }
 
-/* Gallery */
-.gallery{
-  display:flex;
-  gap:15px;
-  margin-top:30px;
-}
-
-.gallery img{
-  width:120px;
-  height:160px;
-  object-fit:cover;
-  border-radius:15px;
-  box-shadow:0 10px 25px rgba(0,0,0,.4);
-  animation:float 4s ease-in-out infinite;
-}
-
-@keyframes float{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-10px)}
-}
-
 /* Hearts */
 .heart{
   position:fixed;
@@ -206,12 +184,6 @@ button{
     <button id="noBtn">No ❤️</button>
   </div>
 
-  <div class="gallery">
-    <img src="photo1.jpg">
-    <img src="photo2.jpg">
-    <img src="photo3.jpg">
-  </div>
-
   <div class="bottom-text">Clicking No Was Never an Option 😌</div>
 </div>
 
@@ -254,7 +226,7 @@ document.getElementById("yesBtn").onclick=()=>{
   document.getElementById("page2").style.display="flex";
 };
 
-// Countdown (EDIT DATE HERE)
+// Countdown
 const targetDate=new Date("2026-02-14T19:00:00");
 const countdown=document.getElementById("countdown");
 
