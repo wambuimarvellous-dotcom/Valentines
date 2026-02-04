@@ -2,12 +2,215 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Diana 💜 Valentine</title>
+<title>Hair, Lashes & Nails by Dee</title>
 
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<!-- Social sharing -->
-<meta property="og:title" content="Diana 💜 Will You Be My Valentine?" />
-<meta property="og:description" content="A special surprise made just for you 💕" />
-<meta property="og:type" content="website" />
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4e7ff;
+  color: #3a005f;
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #6a0dad;
+}
+
+.step {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.slot {
+  padding: 12px;
+  text-align: center;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.available {
+  background: #b9fbc0;
+  cursor: pointer;
+}
+
+.booked {
+  background: #f28482;
+  cursor: not-allowed;
+}
+
+.selected {
+  background: #9d4edd;
+  color: white;
+}
+
+button {
+  background: #6a0dad;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Hair, Lashes & Nails by Dee 💜</h1>
+
+  <!-- STEP 1 -->
+  <div class="step">
+    <label>Appointment Date</label>
+    <input type="date" id="date">
+
+    <label>Your Name</label>
+    <input type="text" id="name" placeholder="Enter your name">
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step">
+    <h3>Select Time (30 min slots)</h3>
+    <div class="calendar" id="slots"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step hidden" id="payment">
+    <h3>Booking Fee: KSH 300</h3>
+    <p>Pay via M-Pesa to:</p>
+    <strong>0743407631</strong>
+    <br><br>
+    <button id="whatsapp">Send WhatsApp Confirmation</button>
+  </div>
+</div>
+
+<script>
+/* 🔥 FIREBASE CONFIG (REPLACE WITH YOUR OWN) */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+firebase.auth().signInAnonymously();
+const db = firebase.firestore();
+
+/* ELEMENTS */
+const slotsDiv = document.getElementById("slots");
+const dateInput = document.getElementById("date");
+const paymentDiv = document.getElementById("payment");
+const whatsappBtn = document.getElementById("whatsapp");
+
+let selectedSlots = [];
+
+/* GENERATE TIME SLOTS */
+function generateSlots(bookedRanges) {
+  slotsDiv.innerHTML = "";
+  selectedSlots = [];
+  paymentDiv.classList.add("hidden");
+
+  for (let h = 9; h < 17; h++) {
+    for (let m of [0, 30]) {
+      const time = `${String(h).padStart(2,"0")}:${m === 0 ? "00" : "30"}`;
+      const slot = document.createElement("div");
+
+      const booked = bookedRanges.some(r => time >= r.startTime && time < r.endTime);
+
+      slot.textContent = time;
+      slot.className = "slot " + (booked ? "booked" : "available");
+
+      if (!booked) {
+        slot.onclick = () => {
+          slot.classList.toggle("selected");
+          if (selectedSlots.includes(time)) {
+            selectedSlots = selectedSlots.filter(t => t !== time);
+          } else {
+            selectedSlots.push(time);
+          }
+          selectedSlots.sort();
+          if (selectedSlots.length > 0) paymentDiv.classList.remove("hidden");
+        };
+      }
+
+      slotsDiv.appendChild(slot);
+    }
+  }
+}
+
+/* LOAD CONFIRMED BOOKINGS */
+dateInput.addEventListener("change", async () => {
+  const date = dateInput.value;
+  if (!date) return;
+
+  const snapshot = await db.collection("appointments")
+    .where("date", "==", date)
+    .where("status", "==", "confirmed")
+    .get();
+
+  const bookedRanges = snapshot.docs.map(d => d.data());
+  generateSlots(bookedRanges);
+});
+
+/* WHATSAPP CONFIRMATION */
+whatsappBtn.onclick = async () => {
+  const name = document.getElementById("name").value;
+  const date = dateInput.value;
+
+  if (!name || selectedSlots.length === 0) {
+    alert("Please complete all steps");
+    return;
+  }
+
+  const startTime = selectedSlots[0];
+  const endTime = selectedSlots[selectedSlots.length - 1];
+
+  await db.collection("appointments").add({
+    name,
+    date,
+    startTime,
+    endTime,
+    status: "pending",
+    timezone: "Africa/Nairobi",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  const message = encodeURIComponent(
+    `Hello Dee, I have paid the KSH 300 booking fee.\n\nName: ${name}\nDate: ${date}\nTime: ${startTime} - ${endTime}`
+  );
+
+  window.open(`https://wa.me/254743407631?text=${message}`, "_blank");
+};
+</script>
+</body>
+</html>
